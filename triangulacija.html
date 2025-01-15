@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title></title>
+		<!-- jQuery library -->
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+		<!-- Latest compiled JavaScript -->
+		    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+
+		<!--linkovi za font-->
+		<link rel="preconnect" href="https://fonts.gstatic.com">
+		<link href="https://fonts.googleapis.com/css2?family=Itim&display=swap" rel="stylesheet">
+
+		<link rel="stylesheet" type="text/css" href="style.css">
+
+	</head>
+
+	<body>
+
+		<canvas id="c" width="36000" height="630" style="display: block; margin: auto;"></canvas>
+
+		<div style="margin: 2vh; display: flex; align-items: center;">
+
+		  <label id="labelForBrojTacaka" for="brojTacaka" style="margin-right: 1vw;">Broj tačaka:</label>
+
+		  <div id="tacke" class="form-inline" style="display: flex; align-items: center;">
+		    <div class="form-group mb-2">
+				<input id="brojTacaka" type="number" class="form-control" style="width: 10vw;" min="1">
+		    </div>
+		    <button id="generisiTacke" type="button" class="btn btn-primary btn-sm" style="margin-left: 1vw;">GENERIŠI TAČKE</button>
+		  </div>
+
+		  <label id="labelForBrojTacaka2" for="brojTacaka2" style="margin-right: 1vw;">Broj tačaka:</label>
+
+		  <div id="tacke2" class="form-inline" style="display: flex; align-items: center;">
+		    <div class="form-group mb-2">
+				<select id="brojTacaka2" class="form-control" style="width: 10vw;">
+				  <option value="1000">1000</option>
+				  <option value="10000">10000</option>
+				  <option value="100000">100000</option>
+				  <option value="1000000">1000000</option>
+				</select>
+		    </div>
+		    <button id="generisiTacke2" type="button" class="btn btn-primary btn-sm" style="margin-left: 1vw;">OK</button>
+		  </div>
+
+		  <button id="crtajPoligon" type="button" class="btn btn-primary btn-sm" style="margin-right: 2vw; margin-left: 5vw;" disabled>CRTAJ POLIGON</button>
+		  <button id="triangulacija" type="button" class="btn btn-primary btn-sm" style="margin-right: 2vw; margin-left: 5vw;" disabled>TRIANGULACIJA</button>
+		  <button id="animacija" type="button" class="btn btn-primary btn-sm" disabled>ANIMACIJA</button>
+
+		</div>
+
+		<div class="m">
+			<div id="odabir_i_unos">
+				  <h4>Sweep line algoritam za traženje triangulacije prostog poligona u vremenu O(nlogn)</h4>
+				  </br>
+				  <input type="radio" id="duzi" name="odabir" value="duzi" checked>
+				  <label for="duzi">CRTANJE POLIGONA NADOVEZIVANJEM DUŽI</label>
+			      </br>
+				  <input type="radio" id="t1" name="odabir" value="tacke">
+				  <label for="t1">CRTANJE POLIGONA ZADAVANJEM TAČAKA</label>
+				  </br>
+				  <input type="radio" id="t2" name="odabir" value="tacke2">
+				  <label for="t2">CRTANJE POLIGONA ZADAVANJEM BROJA FIKSIRANIH TAČAKA</label>
+				  </br>
+				  </br>
+				  <button type="button" class="btn btn-primary" id="odabir">OK</button>
+			</div>
+	    </div>
+	    <script type="text/javascript" src="geometrijskiObjekti.js"></script>
+	    <script type="text/javascript" src="pomocneFunkcije.js"></script>
+		<script type="text/javascript" src="strukturePodataka.js"></script>
+		<script type="text/javascript">
+
+			let c = document.getElementById("c");
+	        let ctx = c.getContext("2d");
+
+			var odabir;
+
+			$("#odabir").on("click", function(){
+
+	        	var radios = document.getElementsByName('odabir');
+
+				for (let i=0; i<radios.length; i++){
+				    if (radios[i].checked) {
+				        odabir=radios[i].value;
+				        break;
+				    }
+				}
+	        	
+	        	if(odabir!==undefined){
+			        if(odabir=="duzi"){
+			        	ctx.lineWidth = 0.03;
+				        for(let i=0; i<510; i++){
+				        	for(j=0; j<210; j++){
+				        		ctx.strokeRect(i*3, j*3, 3, 3);
+				        	}
+				        }
+				        $("div.form-inline").fadeOut(10);
+				        $("#labelForBrojTacaka").fadeOut(10);
+				        $("#labelForBrojTacaka2").fadeOut(10);
+			        }else if(odabir=="tacke"){
+			        	$("#labelForBrojTacaka2").fadeOut(10);
+			        	$("#tacke2").fadeOut(10);
+			        }else{
+			        	$("#labelForBrojTacaka").fadeOut(10);
+			        	$("#tacke").fadeOut(10);
+			        	$("#animacija").fadeOut(10);		        	
+			        }
+	        		$("div.m").fadeOut(100);
+	        		ctx.lineWidth = 1;
+	        	}
+	        });
+
+	        let vrhovi=[];
+	        let vrhovi2=new Set();
+	        let vrhovi3=new RST(poredakVrhovaUSmjeruSuprotnomOdKazaljke);
+
+	        let elemLeft=c.offsetLeft + c.clientLeft;
+			let elemTop=c.offsetTop + c.clientTop;
+
+			let prethodna;
+
+	        $("#c").on("click", function(e){
+
+				let x=e.pageX-elemLeft;
+				let y=e.pageY-elemTop;
+
+				let	xk=x-x%3;
+				let yk=y-y%3;
+
+	        	if(odabir=="duzi"){
+				    if(xk>=0 && yk>=0){
+					    let t=new Vrh(xk, yk);
+					    t.crtaj("red");
+					    vrhovi.push(t);
+					    if(prethodna!=null){
+							ctx.beginPath();
+							ctx.moveTo(prethodna.x, prethodna.y);
+							ctx.lineTo(xk, yk);
+							ctx.stroke();
+					    }
+					    prethodna=t;
+				    }
+	        	}else if(odabir=="tacke"){
+				    if(xk>=0 && yk>=0){
+					    let t=new Vrh(xk, yk);
+					    t.crtaj("red");
+					    vrhovi2.add(t);
+				    }
+	        	}
+	        	if(odabir!==tacke2 && (vrhovi.length + vrhovi2.size)>2){
+	        		var targetButton = document.getElementById("crtajPoligon");
+	        		targetButton.disabled = false;
+	        	}
+			});
+
+	        $("#generisiTacke").on("click", function(e){
+	        	let brojTacaka=$("#brojTacaka").val();
+			    for(let i=0; i<brojTacaka; i++){
+			    	let x1=(Math.random() * 500)*3;
+			        let y1=(Math.random() * 210)*3;
+
+			        let vrh=new Vrh(x1, y1);
+			        vrh.crtaj("red");
+			        vrhovi2.add(vrh);
+			    }
+			    if(vrhovi.length + vrhovi2.size > 2){
+		            var targetButton = document.getElementById("crtajPoligon");
+		        	targetButton.disabled = false;
+			    }
+	        });
+
+	        $("#generisiTacke2").on("click", function(e){
+	        	let brojTacaka=$("#brojTacaka2").val();
+	        	if(brojTacaka==1000){
+	        		for(let i=0; i<48; i++){
+	        			if(i%2==0){
+		        			for(let j=19; j>=0; j--){
+						        let vrh=new Vrh(i*20, j*25);
+						        vrhovi.push(vrh);
+		        			}
+	        			}else{
+		        			for(let j=0; j<20; j++){
+						        let vrh=new Vrh(i*20, j*25);
+						        vrhovi.push(vrh);
+		        			}	        				
+	        			}
+	        		}
+	        		for(let i=47; i>=0; i--){
+	        			if(i%2==0){
+	        				let vrh=new Vrh(i*20, 600);
+	        				vrhovi.push(vrh);
+	        			}else{
+		        			let vrh=new Vrh(i*20, 595);
+	        				vrhovi.push(vrh);        				
+	        			}
+	        		}
+	        	}else if(brojTacaka==10000){
+	        		for(let i=0; i<150; i++){
+	        			if(i%2==0){
+		        			for(let j=66; j>=0; j--){
+						        let vrh=new Vrh(i*10, j*8);
+						        vrhovi.push(vrh);
+		        			}
+	        			}else{
+		        			for(let j=0; j<67; j++){
+						        let vrh=new Vrh(i*10, j*8);
+						        vrhovi.push(vrh);
+		        			}	        				
+	        			}
+	        		}
+	        		for(let i=149; i>=0; i--){
+	        			if(i%2==0){
+	        				let vrh= new Vrh(i*10, 600);
+	        				vrhovi.push(vrh);
+	        			}else{
+		        			let vrh= new Vrh(i*10, 595);
+	        				vrhovi.push(vrh);        				
+	        			}
+	        		}
+	        	}else if(brojTacaka==100000){
+	        		for(let i=0; i<1300; i++){
+	        			if(i%2==0){
+		        			for(let j=75; j>=0; j--){
+						        let vrh=new Vrh(i*6, j*6);
+						        vrhovi.push(vrh);
+		        			}
+	        			}else{
+		        			for(let j=0; j<76; j++){
+						        let vrh=new Vrh(i*6, j*6);
+						        vrhovi.push(vrh);
+		        			}	        				
+	        			}
+	        		}
+	        		for(let i=1299; i>=0; i--){
+	        			if(i%2==0){
+	        				let vrh=new Vrh(i*6, 600);
+	        				vrhovi.push(vrh);
+	        			}else{
+		        			let vrh=new Vrh(i*6, 595);
+	        				vrhovi.push(vrh);        				
+	        			}
+	        		}
+	        	}else if(brojTacaka==1000000){
+	        		for(let i=0; i<5106; i++){
+	        			if(i%2==0){
+		        			for(let j=194; j>=0; j--){
+						        let vrh=new Vrh(i*6, j*3);
+						        vrhovi.push(vrh);
+		        			}
+	        			}else{
+		        			for(let j=0; j<195; j++){
+						        let vrh=new Vrh(i*6, j*3);
+						        vrhovi.push(vrh);
+		        			}	        				
+	        			}
+	        		}
+	        		for(let i=5105; i>=0; i--){
+	        			if(i%2==0){
+	        				let vrh=new Vrh(i*6, 625);
+	        				vrhovi.push(vrh);
+	        			}else{
+		        			let vrh=new Vrh(i*6, 620);
+	        				vrhovi.push(vrh);        				
+	        			}
+	        		}
+	        	}
+	            var targetButton = document.getElementById("crtajPoligon");
+	        	targetButton.disabled = false;
+	        	
+	            var targetButton2 = document.getElementById("generisiTacke2");
+	        	targetButton2.disabled = true;
+	        });
+
+			let center;
+
+			$("#crtajPoligon").on("click", function(e){
+
+		        var targetButton = document.getElementById("crtajPoligon");
+		        targetButton.disabled = true;
+
+		        var targetButton2 = document.getElementById("generisiTacke");
+		        targetButton2.disabled = true;
+
+				if(odabir=="duzi"){
+				    ctx.beginPath();
+				    ctx.moveTo(prethodna.x, prethodna.y);
+					ctx.lineTo(vrhovi[0].x, vrhovi[0].y);
+					ctx.stroke();
+
+				    let area = 0;
+				    for (var i = 0; i < vrhovi.length; i++) {
+				        j = (i + 1) % vrhovi.length;
+				        area += vrhovi[i].x * vrhovi[j].y;
+				        area -= vrhovi[j].x * vrhovi[i].y;
+				    }
+
+					if(area>0){
+						vrhovi=vrhovi.reverse();
+					}                
+
+				    for(let i=0; i<vrhovi.length-2; i++){
+						odrediTipVrha(vrhovi[i], vrhovi[i+1], vrhovi[i+2]);
+						vrhovi[i].index=i;
+						vrhovi[i].pocetakSegmenata.push(i);
+				    }
+
+				    vrhovi[vrhovi.length-2].index=vrhovi.length-2;
+				    vrhovi[vrhovi.length-1].index=vrhovi.length-1;
+
+				    vrhovi[vrhovi.length-2].pocetakSegmenata.push(vrhovi.length-2);
+				    vrhovi[vrhovi.length-1].pocetakSegmenata.push(vrhovi.length-1);			    
+
+				    odrediTipVrha(vrhovi[vrhovi.length-2], vrhovi[vrhovi.length-1], vrhovi[0]);
+
+				    odrediTipVrha(vrhovi[vrhovi.length-1], vrhovi[0], vrhovi[1]);	        	
+				}
+				else if(odabir=="tacke2"){
+					ctx.beginPath();
+					for (let i = 1; i < vrhovi.length; i++) {
+					  ctx.moveTo(vrhovi[i - 1].x, vrhovi[i - 1].y);
+					  ctx.lineTo(vrhovi[i].x, vrhovi[i].y);
+					  vrhovi[i].crtaj("red");
+					}
+					ctx.stroke();
+				    ctx.moveTo(vrhovi[vrhovi.length-1].x, vrhovi[vrhovi.length-1].y);
+					ctx.lineTo(vrhovi[0].x, vrhovi[0].y);
+					ctx.stroke();
+					vrhovi[0].crtaj("red");
+
+					vrhovi=vrhovi.reverse();             
+
+				    for(let i=0; i<vrhovi.length-2; i++){
+						odrediTipVrha(vrhovi[i], vrhovi[i+1], vrhovi[i+2]);
+						vrhovi[i].index=i;
+						vrhovi[i].pocetakSegmenata.push(i);
+				    }
+
+				    vrhovi[vrhovi.length-2].index=vrhovi.length-2;
+				    vrhovi[vrhovi.length-1].index=vrhovi.length-1;
+
+				    vrhovi[vrhovi.length-2].pocetakSegmenata.push(vrhovi.length-2);
+				    vrhovi[vrhovi.length-1].pocetakSegmenata.push(vrhovi.length-1);			    
+
+				    odrediTipVrha(vrhovi[vrhovi.length-2], vrhovi[vrhovi.length-1], vrhovi[0]);
+
+				    odrediTipVrha(vrhovi[vrhovi.length-1], vrhovi[0], vrhovi[1]);
+				}
+				else if(odabir=="tacke"){
+					// Create an Iterator
+					const myIterator = vrhovi2.values();
+
+					// List all Values
+					let x=0; let y=0;
+					for(const entry of myIterator){
+					  x += entry.x;
+					  y += entry.y;
+	                }
+	                x=Math.floor(x/vrhovi2.size);
+	                y=Math.floor(y/vrhovi2.size);
+	                let centar=new Vrh(x, y);
+
+	                center=centar;
+
+	                const i=vrhovi2.values();
+	                for(const entry of i){
+	                	vrhovi3.insertNode(entry);
+	                }
+	                let index=0;
+				    while(!vrhovi3.isEmpty()){
+				    	let vrh=vrhovi3.giveMin().data;
+				    	vrh.index=index;
+				    	vrhovi.push(vrh);
+				    	vrhovi3.deleteNode(vrh);
+				    	index++;
+				    }
+
+				    for(let i=0; i<vrhovi.length-2; i++){
+						ctx.beginPath();
+						ctx.moveTo(vrhovi[i].x, vrhovi[i].y);
+						ctx.lineTo(vrhovi[i+1].x, vrhovi[i+1].y);
+						ctx.stroke();
+						odrediTipVrha(vrhovi[i], vrhovi[i+1], vrhovi[i+2]);
+						vrhovi[i].index=i;
+						vrhovi[i].pocetakSegmenata.push(i);
+				    }
+				    ctx.beginPath();
+				    ctx.moveTo(vrhovi[vrhovi.length-2].x, vrhovi[vrhovi.length-2].y);
+					ctx.lineTo(vrhovi[vrhovi.length-1].x, vrhovi[vrhovi.length-1].y);
+					ctx.stroke();
+
+				    ctx.beginPath();
+				    ctx.moveTo(vrhovi[vrhovi.length-1].x, vrhovi[vrhovi.length-1].y);
+					ctx.lineTo(vrhovi[0].x, vrhovi[0].y);
+					ctx.stroke();
+
+				    vrhovi[vrhovi.length-2].index=vrhovi.length-2;
+				    vrhovi[vrhovi.length-1].index=vrhovi.length-1;
+
+				    vrhovi[vrhovi.length-2].pocetakSegmenata.push(vrhovi.length-2);
+				    vrhovi[vrhovi.length-1].pocetakSegmenata.push(vrhovi.length-1);			    
+
+				    odrediTipVrha(vrhovi[vrhovi.length-2], vrhovi[vrhovi.length-1], vrhovi[0]);
+
+				    odrediTipVrha(vrhovi[vrhovi.length-1], vrhovi[0], vrhovi[1]);
+				}
+
+		        var targetButton3 = document.getElementById("triangulacija");
+		        targetButton3.disabled = false;	
+			});
+
+			let boje=["red", "green", "gold", "blue", "orange", "grey", "emerald", "purple", "brown", "aqua", "lime", "maroon", "fuchsia", "seal", "cyan", "olive", "navy", "teal", "oil", "iridium",
+				"mint", "jade"];
+
+			/////////////////////////////////////////////////////////////////////////algoritam 
+
+	        let yPL=0;
+
+	        let konacniTrouglovi=[];
+
+	        let zaAnimaciju=[]; //animacija dodavanja dijagonala za podjelu poligona na y-monotone 
+
+	        let zaAnimaciju2=[]; //animacija triangulacije y-monotonih
+
+	        $("#triangulacija").on("click", function(e){
+
+		        var targetButton = document.getElementById("triangulacija");
+		        targetButton.disabled = true;
+
+	        	let dcel=new DCEL(vrhovi);
+
+	        	let redDogadjaja=new RST(poredakTacakaDogadjaja);
+                
+                const startTime = performance.now();
+
+	        	for(let i=0; i<dcel.vrhovi.length; i++){
+	        		redDogadjaja.insertNode(dcel.vrhovi[i]);
+	        	}
+	        	let presjeceneIvice=new RST(poredakIvica);
+
+			    while(!redDogadjaja.isEmpty()){
+			    	let dogadjaj=redDogadjaja.giveMin().data;
+			    	yPL=dogadjaj.y;
+
+			    	let dogadjajAnimacija=[dogadjaj];
+			    	zaAnimaciju.push(dogadjajAnimacija);
+
+			    	obradiDogadjaj(dogadjaj, presjeceneIvice, dcel);
+
+			    	redDogadjaja.deleteNode(dogadjaj);
+			    }
+                ///////////////////////////////////////////////triangulacija y-monotonih poligona
+			    let skupPredjenihIvica=new Set();
+			    for(let i=0; i<dcel.lica.length; i++){
+			    	if(skupPredjenihIvica.size==dcel.lica.length-1+dcel.vrhovi.length){
+			    		break;
+			    	}
+			    	if(!skupPredjenihIvica.has(dcel.lica[i])){
+			    		let pocetna=dcel.lica[i];
+			    		let iterator=dcel.lica[i];
+
+			    		let najvisa=dcel.ivice[dcel.lica[i]];
+			    		let najniza=dcel.ivice[dcel.lica[i]];
+
+			    		skupPredjenihIvica.add(pocetna);
+			    		ctx.strokeStyle=boje[Math.floor(Math.random() * 22)];
+
+			    		let brojStranica=0;
+			    		let moguciTrougao=[];
+
+			    		do{
+			    			brojStranica++;
+			    			moguciTrougao.push(dcel.ivice[iterator].pocetak);
+			    			iterator=dcel.ivice[iterator].iduca;
+			    			skupPredjenihIvica.add(iterator);
+
+			    			if(poredakTacakaDogadjaja(dcel.ivice[iterator].pocetak, najniza.pocetak)=="druga"){
+			    				najniza=dcel.ivice[iterator];
+			    			}
+			    			if(poredakTacakaDogadjaja(dcel.ivice[iterator].pocetak, najvisa.pocetak)=="prva"){
+			    				najvisa=dcel.ivice[iterator];
+			    			}
+			    		}while(iterator!=pocetna);
+
+			    		if(brojStranica==3){
+			    			moguciTrougao.push(ctx.strokeStyle);
+			    			konacniTrouglovi.push(moguciTrougao);
+			    		}else{
+				    		let stack=[];
+				    		stack.push(najvisa.pocetak);
+
+				    		let dogadjajAnimacija=[najvisa.pocetak];
+				    		zaAnimaciju2.push(dogadjajAnimacija);
+
+				    		let trenutnaNajnizaDesno;
+				    		let trenutnaNajnizaLijevo;
+				    		let trenutnaNajniza;
+
+				    		if(poredakTacakaDogadjaja(dcel.ivice[najvisa.iduca].pocetak, dcel.ivice[najvisa.prethodna].pocetak)=="prva"){
+				    			trenutnaNajniza="desno";
+				    			trenutnaNajnizaDesno=dcel.ivice[najvisa.iduca];
+				    			trenutnaNajnizaLijevo=dcel.ivice[najvisa.prethodna];
+
+				    			let noviVrh=trenutnaNajnizaDesno.pocetak;
+				    			stack.push(noviVrh);
+
+					    		let dogadjajAnimacija2=[noviVrh];
+					    		zaAnimaciju2.push(dogadjajAnimacija2);
+				    		}else{
+				    			trenutnaNajniza="lijevo";
+				    			trenutnaNajnizaDesno=dcel.ivice[najvisa.iduca];
+				    			trenutnaNajnizaLijevo=dcel.ivice[najvisa.prethodna]; 
+
+				    			let noviVrh=trenutnaNajnizaLijevo.pocetak;
+				    			stack.push(noviVrh);
+
+					    		let dogadjajAnimacija2=[noviVrh];
+					    		zaAnimaciju2.push(dogadjajAnimacija2);
+				    		}
+				    		while(!(trenutnaNajnizaDesno.pocetak==najniza.pocetak && trenutnaNajnizaLijevo.pocetak==najniza.pocetak)){
+				    			if(trenutnaNajniza=="desno"){
+				    				trenutnaNajnizaDesno=dcel.ivice[trenutnaNajnizaDesno.iduca];
+				    				if(poredakTacakaDogadjaja(trenutnaNajnizaDesno.pocetak, trenutnaNajnizaLijevo.pocetak)=="prva"){
+				    					if(trenutnaNajnizaDesno.pocetak!=najniza.pocetak){
+
+								    		let dogadjajAnimacija3=[trenutnaNajnizaDesno.pocetak];
+								    		zaAnimaciju2.push(dogadjajAnimacija3);
+
+				    						let v=stack.pop();
+				    						while(stack.length!=0 && orientation(stack[stack.length-1], v, trenutnaNajnizaDesno.pocetak)>0){
+				    						    let v1=stack[stack.length-1];
+				    							let trougao=[trenutnaNajnizaDesno.pocetak, v, v1, ctx.strokeStyle];
+				    							konacniTrouglovi.push(trougao);
+
+				    							v=stack.pop();
+
+				    							let dijagonalaAnimacija=[trenutnaNajnizaDesno.pocetak, v];
+				    							zaAnimaciju2[zaAnimaciju2.length-1].push(dijagonalaAnimacija);
+				    						}
+				    						stack.push(v);
+				    						let novi=trenutnaNajnizaDesno.pocetak;
+				    						stack.push(novi);
+				    					}
+				    				}else{
+				    					trenutnaNajniza="lijevo";
+				    					if(trenutnaNajnizaLijevo.pocetak!=najniza.pocetak){
+
+								    		let dogadjajAnimacija3=[trenutnaNajnizaLijevo.pocetak];
+								    		zaAnimaciju2.push(dogadjajAnimacija3);
+
+				    					    let vratitiUStack=stack[stack.length-1];
+				    					    while(stack.length!=0){
+				    							let v=stack.pop();
+				    							if(stack.length!=0){
+				    								let trougao=[trenutnaNajnizaLijevo.pocetak, v, stack[stack.length-1], ctx.strokeStyle];
+				    							    konacniTrouglovi.push(trougao);
+
+					    							let dijagonalaAnimacija=[trenutnaNajnizaLijevo.pocetak, v];
+					    							zaAnimaciju2[zaAnimaciju2.length-1].push(dijagonalaAnimacija);
+				    							}
+				    						}
+				    						stack.push(vratitiUStack);
+				    						let novi=trenutnaNajnizaLijevo.pocetak;
+				    						stack.push(novi);
+				    					}
+				    				}
+				    			}else{
+				    				trenutnaNajnizaLijevo=dcel.ivice[trenutnaNajnizaLijevo.prethodna];
+				    				if(poredakTacakaDogadjaja(trenutnaNajnizaLijevo.pocetak, trenutnaNajnizaDesno.pocetak)=="prva"){
+				    					if(trenutnaNajnizaLijevo.pocetak!=najniza.pocetak){
+
+								    		let dogadjajAnimacija3=[trenutnaNajnizaLijevo.pocetak];
+								    		zaAnimaciju2.push(dogadjajAnimacija3);
+
+				    						let v=stack.pop();
+				    						while(stack.length!=0 && orientation(stack[stack.length-1], v, trenutnaNajnizaLijevo.pocetak)<0){
+				    						    let v1=stack[stack.length-1];
+				    							let trougao=[trenutnaNajnizaLijevo.pocetak, v, v1, ctx.strokeStyle];
+				    							konacniTrouglovi.push(trougao);
+
+				    							v=stack.pop();
+
+				    							let dijagonalaAnimacija=[trenutnaNajnizaLijevo.pocetak, v];
+				    							zaAnimaciju2[zaAnimaciju2.length-1].push(dijagonalaAnimacija);
+				    						}
+				    						stack.push(v);
+				    						let novi=trenutnaNajnizaLijevo.pocetak;
+				    						stack.push(novi);
+				    					}
+				    				}else{
+				    					trenutnaNajniza="desno";
+				    					if(trenutnaNajnizaDesno.pocetak!=najniza.pocetak){
+
+								    		let dogadjajAnimacija3=[trenutnaNajnizaDesno.pocetak];
+								    		zaAnimaciju2.push(dogadjajAnimacija3);
+
+				    					    let vratitiUStack=stack[stack.length-1];
+				    					    while(stack.length!=0){
+				    							let v=stack.pop();
+				    							if(stack.length!=0){
+					    							let trougao=[trenutnaNajnizaDesno.pocetak, v, stack[stack.length-1], ctx.strokeStyle];
+					    							konacniTrouglovi.push(trougao);
+
+					    							let dijagonalaAnimacija=[trenutnaNajnizaDesno.pocetak, v];
+					    							zaAnimaciju2[zaAnimaciju2.length-1].push(dijagonalaAnimacija);
+				    							}
+				    						}
+				    						stack.push(vratitiUStack);
+				    						let novi=trenutnaNajnizaDesno.pocetak;
+				    						stack.push(novi);
+				    					}
+				    				}
+				    			}
+				    		}
+				    		if(stack.length>2){
+								let dogadjajAnimacija3=[najniza.pocetak];
+								zaAnimaciju2.push(dogadjajAnimacija3);
+
+				    			let trougao=[najniza.pocetak, stack[0], stack[1], ctx.strokeStyle];
+				    			konacniTrouglovi.push(trougao);
+
+				    			let dijagonalaAnimacija=[najniza.pocetak, stack[0]];
+				    			zaAnimaciju2[zaAnimaciju2.length-1].push(dijagonalaAnimacija);
+
+					    		for(let j=1; j<stack.length-1; j++){
+					    			let trougao1=[najniza.pocetak, stack[j], stack[j+1], ctx.strokeStyle];
+					    			konacniTrouglovi.push(trougao1);
+
+					    			let dijagonalaAnimacija=[najniza.pocetak, stack[j]];
+					    			zaAnimaciju2[zaAnimaciju2.length-1].push(dijagonalaAnimacija);
+					    		}
+				    		}else{
+								let dogadjajAnimacija3=[najniza.pocetak];
+								zaAnimaciju2.push(dogadjajAnimacija3);
+
+				    			let trougao=[najniza.pocetak, stack[0], stack[1], ctx.strokeStyle];
+				    			konacniTrouglovi.push(trougao);				 
+				    		}
+			    		}
+			    	}
+			    }
+
+			    const endTime = performance.now();
+
+			    const time = endTime - startTime;
+			    console.log(`Vrijeme izvršavanja: ${time} milliseconds`);
+
+                console.log(konacniTrouglovi); //ispis svih trouglova krajnje triangulacije
+
+			    for(let i=0; i<konacniTrouglovi.length; i++){  //crtanje svih krajnjih trouglova kojim je poligon trianguliran
+			    	ctx.strokeStyle=konacniTrouglovi[i][3];
+			    	ctx.beginPath();
+			    	ctx.moveTo(konacniTrouglovi[i][0].x, konacniTrouglovi[i][0].y);
+			    	ctx.lineTo(konacniTrouglovi[i][1].x, konacniTrouglovi[i][1].y);
+			    	ctx.lineTo(konacniTrouglovi[i][2].x, konacniTrouglovi[i][2].y);
+			    	ctx.closePath();
+			    	ctx.stroke();
+			    }
+
+		        var targetButton2 = document.getElementById("animacija");
+		        targetButton2.disabled = false;
+	        });
+
+
+	        function obradiDogadjaj(dogadjaj, presjeceneIvice, dcel){
+	        	if(dogadjaj.tip=="start"){
+	        		dcel.ivice[dogadjaj.index].pomocnik=dogadjaj; 
+	        		presjeceneIvice.insertNode(dcel.ivice[dogadjaj.index]);
+	        	}
+	        	else if(dogadjaj.tip=="end"){
+	        		if(dcel.ivice[vratiPrethodniIndex(dogadjaj.index)].pomocnik.tip=="merge"){
+	        			dcel.dodajDijagonalu(dogadjaj.index, dcel.ivice[vratiPrethodniIndex(dogadjaj.index)].pomocnik.index);
+
+	        			let dijagonalaAnimacija=[dogadjaj.index, dcel.ivice[vratiPrethodniIndex(dogadjaj.index)].pomocnik.index];
+	        			zaAnimaciju[zaAnimaciju.length-1].push(dijagonalaAnimacija);
+	        		}
+	        		presjeceneIvice.deleteNode(dcel.ivice[vratiPrethodniIndex(dogadjaj.index)]);
+	        	}
+	        	else if(dogadjaj.tip=="merge"){
+	        		if(dcel.ivice[vratiPrethodniIndex(dogadjaj.index)].pomocnik.tip=="merge"){
+	        			dcel.dodajDijagonalu(dogadjaj.index, dcel.ivice[vratiPrethodniIndex(dogadjaj.index)].pomocnik.index);
+
+	        			let dijagonalaAnimacija=[dogadjaj.index, dcel.ivice[vratiPrethodniIndex(dogadjaj.index)].pomocnik.index];
+	        			zaAnimaciju[zaAnimaciju.length-1].push(dijagonalaAnimacija);
+	        		}
+	        		presjeceneIvice.deleteNode(dcel.ivice[vratiPrethodniIndex(dogadjaj.index)]);
+	        		let pomocnaIvicaZaOdredjivanjeIviceLijevo=new Ivica(new Vrh(dogadjaj.x, dogadjaj.y-10), new Vrh(dogadjaj.x, dogadjaj.y));
+	        		let ivicaLijevo=presjeceneIvice.predecessorSuccesor(pomocnaIvicaZaOdredjivanjeIviceLijevo)[0].data;
+	        		if(dcel.ivice[ivicaLijevo.index].pomocnik.tip=="merge"){
+	        			dcel.dodajDijagonalu(dogadjaj.index, dcel.ivice[ivicaLijevo.index].pomocnik.index);
+
+	        			let dijagonalaAnimacija=[dogadjaj.index, dcel.ivice[ivicaLijevo.index].pomocnik.index];
+	        			zaAnimaciju[zaAnimaciju.length-1].push(dijagonalaAnimacija);
+	        		}
+	        		dcel.ivice[ivicaLijevo.index].pomocnik=dogadjaj;
+	        	}
+	        	else if(dogadjaj.tip=="split"){
+	        		let pomocnaIvicaZaOdredjivanjeIviceLijevo=new Ivica(new Vrh(dogadjaj.x, dogadjaj.y-10), new Vrh(dogadjaj.x, dogadjaj.y));
+	        		let ivicaLijevo=presjeceneIvice.predecessorSuccesor(pomocnaIvicaZaOdredjivanjeIviceLijevo)[0].data;
+	        		dcel.dodajDijagonalu(dogadjaj.index, dcel.ivice[ivicaLijevo.index].pomocnik.index);
+
+	        		let dijagonalaAnimacija=[dogadjaj.index, dcel.ivice[ivicaLijevo.index].pomocnik.index];
+	        		zaAnimaciju[zaAnimaciju.length-1].push(dijagonalaAnimacija);
+
+	        		dcel.ivice[ivicaLijevo.index].pomocnik=dogadjaj;
+	        		dcel.ivice[dogadjaj.index].pomocnik=dogadjaj;
+	        		presjeceneIvice.insertNode(dcel.ivice[dogadjaj.index]);
+	        	}
+	        	else{
+	        		if(dogadjaj.ispodIliIznad(dcel.vrhovi[vratiPrethodniIndex(dogadjaj.index)])=="iznad" && dogadjaj.ispodIliIznad(dcel.vrhovi[vratiIduciIndex(dogadjaj.index)])=="ispod"){
+		        		if(dcel.ivice[vratiPrethodniIndex(dogadjaj.index)].pomocnik.tip=="merge"){
+		        			dcel.dodajDijagonalu(dogadjaj.index, dcel.ivice[vratiPrethodniIndex(dogadjaj.index)].pomocnik.index);
+
+		        			let dijagonalaAnimacija=[dogadjaj.index, dcel.ivice[vratiPrethodniIndex(dogadjaj.index)].pomocnik.index];
+		        			zaAnimaciju[zaAnimaciju.length-1].push(dijagonalaAnimacija);
+		        		}
+		        		presjeceneIvice.deleteNode(dcel.ivice[vratiPrethodniIndex(dogadjaj.index)]);
+		        		dcel.ivice[dogadjaj.index].pomocnik=dogadjaj; //
+		        		presjeceneIvice.insertNode(dcel.ivice[dogadjaj.index]);
+	        		}else{
+		        		let pomocnaIvicaZaOdredjivanjeIviceLijevo=new Ivica(new Vrh(dogadjaj.x, dogadjaj.y-10), new Vrh(dogadjaj.x, dogadjaj.y));
+		        		let ivicaLijevo=presjeceneIvice.predecessorSuccesor(pomocnaIvicaZaOdredjivanjeIviceLijevo)[0].data;
+		        		if(dcel.ivice[ivicaLijevo.index].pomocnik.tip=="merge"){
+		        			dcel.dodajDijagonalu(dogadjaj.index, dcel.ivice[ivicaLijevo.index].pomocnik.index);
+
+		        			let dijagonalaAnimacija=[dogadjaj.index, dcel.ivice[ivicaLijevo.index].pomocnik.index];
+		        			zaAnimaciju[zaAnimaciju.length-1].push(dijagonalaAnimacija);
+		        		}
+		        		dcel.ivice[ivicaLijevo.index].pomocnik=dogadjaj;
+	        		}
+	        	}
+	        } 
+
+            /////////////////////////////////////////////////////////////////kod koji služi za animaciju izvršavanja algoritma
+			$("#animacija").on("click", function(e){
+
+				ctx.strokeStyle="black";
+
+				let vecNacrtaneDijagonale=[];
+
+			    for (let i=0; i<zaAnimaciju.length; i++){
+				    setTimeout((index) => {
+					    ctx.clearRect(0, 0, c.width, c.height);
+					    ctx.beginPath();
+					    for (let j=0; j<vrhovi.length-1; j++) {
+						    vrhovi[j].crtaj("red");
+						    ctx.moveTo(vrhovi[j].x, vrhovi[j].y);
+						    ctx.lineTo(vrhovi[j+1].x, vrhovi[j+1].y);
+					    }
+					    ctx.stroke();
+					    vrhovi[vrhovi.length-1].crtaj("red");
+					    ctx.moveTo(vrhovi[vrhovi.length-1].x, vrhovi[vrhovi.length-1].y);
+					    ctx.lineTo(vrhovi[0].x, vrhovi[0].y);
+					    ctx.stroke();
+
+				        for(let j=0; j<vecNacrtaneDijagonale.length; j++){
+					      	ctx.beginPath();
+					      	ctx.moveTo(vecNacrtaneDijagonale[j][0].x, vecNacrtaneDijagonale[j][0].y);
+					      	ctx.lineTo(vecNacrtaneDijagonale[j][1].x, vecNacrtaneDijagonale[j][1].y);
+					      	ctx.stroke();
+				        }
+
+					    for(let j=1; j<zaAnimaciju[index].length; j++){
+					      	ctx.beginPath();
+					      	ctx.moveTo(vrhovi[zaAnimaciju[index][j][0]].x, vrhovi[zaAnimaciju[index][j][0]].y);
+					      	ctx.lineTo(vrhovi[zaAnimaciju[index][j][1]].x, vrhovi[zaAnimaciju[index][j][1]].y);
+					      	ctx.stroke();
+					      	let nacrtanaDijagonala=[vrhovi[zaAnimaciju[index][j][0]], vrhovi[zaAnimaciju[index][j][1]]];
+					      	vecNacrtaneDijagonale.push(nacrtanaDijagonala);
+					    }
+
+						ctx.strokeStyle="red";
+						ctx.lineWidth=2;
+				        ctx.beginPath();
+				        ctx.moveTo(zaAnimaciju[index][0].x-20, zaAnimaciju[index][0].y);
+				        ctx.lineTo(zaAnimaciju[index][0].x+20, zaAnimaciju[index][0].y);
+				        ctx.stroke();
+				        ctx.strokeStyle="black";
+				        ctx.lineWidth=1;
+				    }, i * 700, i);
+			    }
+
+			    setTimeout(() => {
+				    for (let i=0; i<zaAnimaciju2.length; i++){
+					    setTimeout((index) => {
+						    ctx.clearRect(0, 0, c.width, c.height);
+						    ctx.beginPath();
+						    for (let j=0; j<vrhovi.length-1; j++) {
+							    vrhovi[j].crtaj("red");
+							    ctx.moveTo(vrhovi[j].x, vrhovi[j].y);
+							    ctx.lineTo(vrhovi[j+1].x, vrhovi[j+1].y);
+						    }
+						    ctx.stroke();
+						    vrhovi[vrhovi.length-1].crtaj("red");
+						    ctx.moveTo(vrhovi[vrhovi.length-1].x, vrhovi[vrhovi.length-1].y);
+						    ctx.lineTo(vrhovi[0].x, vrhovi[0].y);
+						    ctx.stroke();
+
+					        for(let j=0; j<vecNacrtaneDijagonale.length; j++){
+						      	ctx.beginPath();
+						      	ctx.moveTo(vecNacrtaneDijagonale[j][0].x, vecNacrtaneDijagonale[j][0].y);
+						      	ctx.lineTo(vecNacrtaneDijagonale[j][1].x, vecNacrtaneDijagonale[j][1].y);
+						      	ctx.stroke();
+					        }
+
+						    for(let j=1; j<zaAnimaciju2[index].length; j++){
+						      	ctx.beginPath();
+						      	ctx.moveTo(zaAnimaciju2[index][j][0].x, zaAnimaciju2[index][j][0].y);
+						      	ctx.lineTo(zaAnimaciju2[index][j][1].x, zaAnimaciju2[index][j][1].y);
+						      	ctx.stroke();
+						      	let nacrtanaDijagonala=[zaAnimaciju2[index][j][0], zaAnimaciju2[index][j][1]];
+						      	vecNacrtaneDijagonale.push(nacrtanaDijagonala);
+						    }
+
+						    ctx.strokeStyle="red";
+						    ctx.lineWidth=2;
+					        ctx.beginPath();
+					        ctx.moveTo(zaAnimaciju2[index][0].x-20, zaAnimaciju2[index][0].y);
+					        ctx.lineTo(zaAnimaciju2[index][0].x+20, zaAnimaciju2[index][0].y);
+					        ctx.stroke();
+					        ctx.strokeStyle="black";
+					        ctx.lineWidth=1;
+					    }, i * 700, i);
+					}
+				}, zaAnimaciju.length*700);
+			});
+
+		</script>
+	</body>
+</html>
